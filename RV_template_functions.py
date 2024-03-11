@@ -454,4 +454,5 @@ def apply_template_threepoints(HJD, RV, errRV, AV, pulsation_type,
 
     return {'xfit': xfit, 'yfit': yfit,
             'v_gamma_mean': v_gamma_mean, 
-            'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + (ARV*c.sigma.values[0])**2)}
+            'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + (ARV*c.sigma.values[0])**2), 
+            'chisq': chisqs[ind_best]}
