@@ -412,7 +412,7 @@ def apply_template_threepoints(HJD, RV, errRV, AV, pulsation_type,
         m = mpfit(myfunct_gaupe_for_threepoints, p0, parinfo=parinfo, functkw=fa, quiet=quiet)
 
         # yfit = gaupe_for_threepoints(xfit, *m.params, filein)
-        chisq = (myfunct_gaupe_for_threepoints(m.params, x=phase, y=RV, err=errRV)[1] ** 2).sum()
+        chisq = (myfunct_gaupe_for_threepoints(m.params, x=phase, y=RV, err=errRV)[1] ** 2).sum() / (len(RV)-2)
         chisqs.append(chisq)
         popts.append(m.params)
 
