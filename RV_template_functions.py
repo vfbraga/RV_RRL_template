@@ -539,7 +539,6 @@ def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
     yfit = gaupe_for_templfit_amplfixed(xfit, *popts[ind_best], filein)
     v_gamma_mean = np.mean(yfit)
     errv_gamma_mean = np.sqrt(np.diag(m.covar))[1]
-#     errv_gamma_mean = 0
 
     if figure_out != '':
         fig = plt.figure(figsize=(10, 7))
@@ -560,5 +559,5 @@ def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
 
     return {'xfit': xfit, 'yfit': yfit,
             'v_gamma_mean': v_gamma_mean, 
-            'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + (ARV*c.sigma.values[0])**2), 
+            'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + (*popts[ind_best][2]*c.sigma.values[0])**2), 
             'chisq': chisqs[ind_best]}
