@@ -68,7 +68,7 @@ def gaupe(x, c):
         c.Amp8.values*np.exp(-(np.sin(np.pi*(x-c.phi8.values))/(c.sig8.values))**2)
     return y
 
-def gaupe_for_threepoints(x, Delta_phase, Delta_mag, ARV,
+def gaupe_for_templfit_amplfixed(x, Delta_phase, Delta_mag, ARV,
                           templatebin_int, diagnostic_int, filein='coefficients.csv'):
 
     '''
@@ -105,12 +105,12 @@ def gaupe_for_threepoints(x, Delta_phase, Delta_mag, ARV,
     return y
 
 
-def myfunct_gaupe_for_threepoints(p, fjac=None, x=None, y=None, err=None):
+def myfunct_gaupe_for_templfit_amplfixed(p, fjac=None, x=None, y=None, err=None):
     # Parameter values are passed in "p"
     # If fjac==None then partial derivatives should not be
     # computed.  It will always be None if MPFIT is called with default
     # flag.
-    model = gaupe_for_threepoints(x, p[0], p[1], p[2], p[3], p[4])
+    model = gaupe_for_templfit_amplfixed(x, p[0], p[1], p[2], p[3], p[4])
     # Non-negative status value means MPFIT should continue, negative means
     # stop the calculation.
     status = 0
@@ -337,12 +337,12 @@ def apply_template_onepoint(HJD, RV, errRV, AV, pulsation_type,
     return data_return
 
 
-def apply_template_threepoints(HJD, RV, errRV, AV, pulsation_type,
+def apply_template_templfit_amplfixed(HJD, RV, errRV, AV, pulsation_type,
                             period, t0, diagnostic_int,
                             filein, figure_out='', quiet=1):
 
     '''
-    apply_template_threepoints function applies the right template (selected
+    apply_template_templfit_amplfixed function applies the right template (selected
     by means of the parameters pulsation_type, period and diagnostic)
     on a series of RV measurements
 
@@ -409,17 +409,17 @@ def apply_template_threepoints(HJD, RV, errRV, AV, pulsation_type,
                    {'value': diagnostic_int, 'fixed': 1}]
 
         fa = {'x': phase, 'y': RV, 'err': errRV}
-        m = mpfit(myfunct_gaupe_for_threepoints, p0, parinfo=parinfo, functkw=fa, quiet=quiet)
+        m = mpfit(myfunct_gaupe_for_templfit_amplfixed, p0, parinfo=parinfo, functkw=fa, quiet=quiet)
 
-        # yfit = gaupe_for_threepoints(xfit, *m.params, filein)
-        chisq = (myfunct_gaupe_for_threepoints(m.params, x=phase, y=RV, err=errRV)[1] ** 2).sum() / (len(RV)-2)
+        # yfit = gaupe_for_templfit_amplfixed(xfit, *m.params, filein)
+        chisq = (myfunct_gaupe_for_templfit_amplfixed(m.params, x=phase, y=RV, err=errRV)[1] ** 2).sum() / (len(RV)-2)
         chisqs.append(chisq)
         popts.append(m.params)
 
     chisqs = np.asarray(chisqs)
     ind_best = chisqs.argmin()
 
-    yfit = gaupe_for_threepoints(xfit, *popts[ind_best], filein)
+    yfit = gaupe_for_templfit_amplfixed(xfit, *popts[ind_best], filein)
     v_gamma_mean = np.mean(yfit)
     errv_gamma_mean = np.sqrt(np.diag(m.covar))[1]
 #     errv_gamma_mean = 0
@@ -433,8 +433,8 @@ def apply_template_threepoints(HJD, RV, errRV, AV, pulsation_type,
        # for iii, popt in enumerate(popts):
        #      print('---')
        #      print(popt)
-       #      yfit = gaupe_for_threepoints(xfit, *popt, filein)
-       #      # yfit = gaupe_for_threepoints(xfit, popt[0], popt[1], ARV, templatebin, diagnostic, filein)
+       #      yfit = gaupe_for_templfit_amplfixed(xfit, *popt, filein)
+       #      # yfit = gaupe_for_templfit_amplfixed(xfit, popt[0], popt[1], ARV, templatebin, diagnostic, filein)
        #
        #      ax.plot(xfit, yfit, colors[iii]+'--', zorder=0)
        #      ax.text(xfit[0], yfit[0], str(iii))
