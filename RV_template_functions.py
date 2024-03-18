@@ -455,7 +455,7 @@ def apply_template_templfit_amplfixed(HJD, RV, errRV, AV, pulsation_type,
     return {'xfit': xfit, 'yfit': yfit,
             'v_gamma_mean': v_gamma_mean, 
             'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + (ARV*c.sigma.values[0])**2), 
-            'popts': *popts[ind_best],
+            'popts': popts[ind_best],
             'chisq': chisqs[ind_best]}
 
 def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
@@ -518,11 +518,11 @@ def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
     popts=[]
     for deltaphase_guess in deltaphase_guesses:
 
-        p0 = (deltaphase_guess, np.mean(RV), ARV, templatebin_int, diagnostic_int)
+        p0 = (deltaphase_guess, np.mean(RV), np.max(RV) - np.min(RV), templatebin_int, diagnostic_int)
 
         parinfo = [{'value': deltaphase_guess, 'fixed': 0, 'limited': [0, 0], 'limits': [0.0, 0.0]},
                    {'value': np.mean(RV), 'fixed': 0, 'limited': [0, 0], 'limits': [0.0, 0.0]},
-                   {'value': np.max(RV) - np.min(RV), 'fixed': 0},
+                   {'value': np.max(RV) - np.min(RV), 'fixed': 0, 'limited': [1, 0], 'limits': [0.0, 0.0]},
                    {'value': templatebin_int, 'fixed': 1},
                    {'value': diagnostic_int, 'fixed': 1}]
 
@@ -535,8 +535,8 @@ def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
         popts.append(m.params)
 
     chisqs = np.asarray(chisqs)
-    ind_best = chisqs.argmin()
-
+    ind_best = chisqs.argmin()    
+    
     yfit = gaupe_for_templfit_amplfixed(xfit, *popts[ind_best], filein)
     v_gamma_mean = np.mean(yfit)
     errv_gamma_mean = np.sqrt(np.diag(m.covar))[1]
@@ -560,6 +560,6 @@ def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
 
     return {'xfit': xfit, 'yfit': yfit,
             'v_gamma_mean': v_gamma_mean, 
-            'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + (*popts[ind_best][2]*c.sigma.values[0])**2), 
-            'popts': *popts[ind_best],
+            'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + ( popts[ind_best][2]*c.sigma.values[0])**2 ), 
+            'popts': popts[ind_best],
             'chisq': chisqs[ind_best]}
