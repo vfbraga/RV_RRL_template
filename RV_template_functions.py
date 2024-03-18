@@ -222,12 +222,12 @@ def find_templatebin(pulsation_type,period):
 
     return(templatebin)
 
-def apply_template_onepoint(HJD, RV, errRV, AV, pulsation_type,
+def apply_template_anchor(HJD, RV, errRV, AV, pulsation_type,
                             period, t0, tmean_or_tmax, diagnostic_int,
                             filein, figure_out=''):
 
     '''
-    apply_template_onepoint function applies the right template (selected
+    apply_template_anchor function applies the right template (selected
     by means of the parameters pulsation_type, period and diagnostic)
     on a series of RV measurements
 
