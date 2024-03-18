@@ -455,6 +455,7 @@ def apply_template_templfit_amplfixed(HJD, RV, errRV, AV, pulsation_type,
     return {'xfit': xfit, 'yfit': yfit,
             'v_gamma_mean': v_gamma_mean, 
             'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + (ARV*c.sigma.values[0])**2), 
+            'popts': *popts[ind_best],
             'chisq': chisqs[ind_best]}
 
 def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
@@ -560,4 +561,5 @@ def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
     return {'xfit': xfit, 'yfit': yfit,
             'v_gamma_mean': v_gamma_mean, 
             'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + (*popts[ind_best][2]*c.sigma.values[0])**2), 
+            'popts': *popts[ind_best],
             'chisq': chisqs[ind_best]}
