@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from scipy import optimize
 from mpfit import mpfit
+import os
 # from astrolibpy import mpfit
 
 def weighted_avg_and_std(values, weights):
@@ -514,6 +515,227 @@ def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
     n_guesses = 3
     deltaphase_guesses = np.arange(n_guesses)/float(n_guesses)
 
+    chisqs=[]
+    popts=[]
+    for deltaphase_guess in deltaphase_guesses:
+
+        p0 = (deltaphase_guess, np.mean(RV), np.max(RV) - np.min(RV), templatebin_int, diagnostic_int)
+
+        parinfo = [{'value': deltaphase_guess, 'fixed': 0, 'limited': [0, 0], 'limits': [0.0, 0.0]},
+                   {'value': np.mean(RV), 'fixed': 0, 'limited': [0, 0], 'limits': [0.0, 0.0]},
+                   {'value': np.max(RV) - np.min(RV), 'fixed': 0, 'limited': [1, 0], 'limits': [0.0, 0.0]},
+                   {'value': templatebin_int, 'fixed': 1},
+                   {'value': diagnostic_int, 'fixed': 1}]
+
+        fa = {'x': phase, 'y': RV, 'err': errRV}
+        m = mpfit(myfunct_gaupe_for_templfit_amplfixed, p0, parinfo=parinfo, functkw=fa, quiet=quiet)
+
+        # yfit = gaupe_for_templfit_amplfixed(xfit, *m.params, filein)
+        chisq = (myfunct_gaupe_for_templfit_amplfixed(m.params, x=phase, y=RV, err=errRV)[1] ** 2).sum() / (len(RV)-2)
+        chisqs.append(chisq)
+        popts.append(m.params)
+
+    chisqs = np.asarray(chisqs)
+    ind_best = chisqs.argmin()    
+    
+    yfit = gaupe_for_templfit_amplfixed(xfit, *popts[ind_best], filein)
+    v_gamma_mean = np.mean(yfit)
+    errv_gamma_mean = np.sqrt(np.diag(m.covar))[1]
+
+    if figure_out != '':
+        fig = plt.figure(figsize=(10, 7))
+        ax = fig.add_subplot(111)
+
+        ax.plot(xfit, yfit, 'k', zorder=0)
+
+        ax.plot([-1, 2], [v_gamma_mean, v_gamma_mean], '--', c='k', zorder=0)
+        ax.errorbar(phase, RV, yerr=errRV, c='r', fmt = ' ', zorder=1)
+        ax.scatter(phase, RV, c='r', s=20, zorder=1)
+
+        ax.set_xlim([0.,1.])
+        ax.tick_params(axis='both', which='major', labelsize=14)
+        plt.xlabel('PHASE', fontsize=18)
+        plt.ylabel('RV [km/s]', fontsize=18)
+        fig.savefig(figure_out)
+        plt.close()
+
+    return {'xfit': xfit, 'yfit': yfit,
+            'v_gamma_mean': v_gamma_mean, 
+            'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + ( popts[ind_best][2]*c.sigma.values[0])**2 ), 
+            'popts': popts[ind_best],
+            'chisq': chisqs[ind_best]}
+
+def apply_template_templfit_amplfixed_fromphases(phase, RV, errRV, AV, pulsation_type,
+                            period, diagnostic_int,
+                            filein, figure_out='', quiet=1):
+
+    '''
+    apply_template_templfit_amplfixed function applies the right template (selected
+    by means of the parameters pulsation_type, period and diagnostic)
+    on a series of RV measurements. It can be used if only phases and not HJDs are available
+
+    :param HJD: list of Heliocentric Julian Dates for the RV measurements (list)
+    :param RV: list of RV measurements (list)
+    :param errRV: list of uncertainties on RV (list)
+    :param AV: V-band amplitude, in magnitudes, of the target (float)
+    :param pulsation_type: pulsation mode (int)
+     0 for Fundamental
+     1 for First Overtone
+    :param period: pulsation period in days (np.float64)
+    :param diagnostic_int: chemical element that was used to measure RVs.
+     Possible values: 0, 1, 2, 3, 4, 5, 6 for
+     Iron, Magnesium, Sodium, H_alpha, H_beta, H_gamma, H_delta, respectively
+    :param filein: path to the coefficients table in csv format (string)
+    :param figure_out: path to the output figure. '' if no output figure is desired. (string)
+    :param quiet: 0/1 to allow/forbid mpfit to print the results of the iterations (int)
+    :return: data_return: dictionary including the following entries:
+     'v_gamma_list': list of systemic velocities from each RV measurement
+     'xfit': grid of phases
+     'yfit_list': template fit values for each RV measuremnet (list of lists)
+     'v_gamma_mean': 2-element tuple including average and standard deviation of the systemic velocity
+     (dictionary)
+    '''
+
+    templatebin_dict = {0:'RRc', 1:'RRab1', 2:'RRab2', 3:'RRab3'}
+    diagnostic_dict = {0:'Fe', 1:'Na', 2:'Mg', 3:'Ha', 4:'Hb', 5:'Hg', 6:'Hd'}
+
+    templatebin_int = find_templatebin(pulsation_type, period)
+
+    templatebin = templatebin_dict[templatebin_int]
+    diagnostic = diagnostic_dict[diagnostic_int]
+
+    ARV = amplitude_rescale(AV, pulsation_type, diagnostic_int)
+
+    # Generates the grid of phases to evaluate the template
+    n_phases_for_model = 1000
+    xfit = (np.arange(n_phases_for_model + 1) / float(n_phases_for_model))
+
+    # Read the coefficients table
+    c = load_coefficient_table(filein)
+
+    # select the right template for the current diagnostic and template bin
+    c = c[(c['Template'] == diagnostic) & (c['Bin'] == templatebin)]
+
+    # Generates the first guess on the coefficients
+    n_guesses = 3
+    deltaphase_guesses = np.arange(n_guesses)/float(n_guesses)
+
+    chisqs=[]
+    popts=[]
+    for deltaphase_guess in deltaphase_guesses:
+
+        p0 = (deltaphase_guess, np.mean(RV), ARV, templatebin_int, diagnostic_int)
+
+        parinfo = [{'value': deltaphase_guess, 'fixed': 0, 'limited': [0, 0], 'limits': [0.0, 0.0]},
+                   {'value': np.mean(RV), 'fixed': 0, 'limited': [0, 0], 'limits': [0.0, 0.0]},
+                   {'value': ARV, 'fixed': 1},
+                   {'value': templatebin_int, 'fixed': 1},
+                   {'value': diagnostic_int, 'fixed': 1}]
+
+        fa = {'x': phase, 'y': RV, 'err': errRV}
+        m = mpfit(myfunct_gaupe_for_templfit_amplfixed, p0, parinfo=parinfo, functkw=fa, quiet=quiet)
+
+        # yfit = gaupe_for_templfit_amplfixed(xfit, *m.params, filein)
+        chisq = (myfunct_gaupe_for_templfit_amplfixed(m.params, x=phase, y=RV, err=errRV)[1] ** 2).sum() / (len(RV)-2)
+        chisqs.append(chisq)
+        popts.append(m.params)
+
+    chisqs = np.asarray(chisqs)
+    ind_best = chisqs.argmin()
+
+    yfit = gaupe_for_templfit_amplfixed(xfit, *popts[ind_best], filein)
+    v_gamma_mean = np.mean(yfit)
+    errv_gamma_mean = np.sqrt(np.diag(m.covar))[1]
+#     errv_gamma_mean = 0
+
+    if figure_out != '':
+        fig = plt.figure(figsize=(10, 7))
+        ax = fig.add_subplot(111)
+
+# to plot all the attempts with different phase_guesses
+       #  colors=['r','b','g']
+       # for iii, popt in enumerate(popts):
+       #      print('---')
+       #      print(popt)
+       #      yfit = gaupe_for_templfit_amplfixed(xfit, *popt, filein)
+       #      # yfit = gaupe_for_templfit_amplfixed(xfit, popt[0], popt[1], ARV, templatebin, diagnostic, filein)
+       #
+       #      ax.plot(xfit, yfit, colors[iii]+'--', zorder=0)
+       #      ax.text(xfit[0], yfit[0], str(iii))
+
+        ax.plot(xfit, yfit, 'k', zorder=0)
+
+        ax.plot([-1, 2], [v_gamma_mean, v_gamma_mean], '--', c='k', zorder=0)
+        ax.errorbar(phase, RV, yerr=errRV, c='r', fmt = ' ', zorder=1)
+        ax.scatter(phase, RV, c='r', s=20, zorder=1)
+
+        ax.set_xlim([0.,1.])
+        ax.tick_params(axis='both', which='major', labelsize=14)
+        plt.xlabel('PHASE', fontsize=18)
+        plt.ylabel('RV [km/s]', fontsize=18)
+        fig.savefig(figure_out)
+        plt.close()
+
+    return {'xfit': xfit, 'yfit': yfit,
+            'v_gamma_mean': v_gamma_mean, 
+            'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + (ARV*c.sigma.values[0])**2), 
+            'popts': popts[ind_best],
+            'chisq': chisqs[ind_best]}
+
+def apply_template_templfit_amplfree_fromphases(phase, RV, errRV, pulsation_type,
+                            period, diagnostic_int,
+                            filein, figure_out='', quiet=1):
+
+    '''
+    apply_template_templfit_amplfixed function applies the right template (selected
+    by means of the parameters pulsation_type, period and diagnostic)
+    on a series of RV measurements. It can be used if only phases and not HJDs are available
+
+    :param phase: list of Heliocentric Julian Dates for the RV measurements (list)
+    :param RV: list of RV measurements (list)
+    :param errRV: list of uncertainties on RV (list)
+    :param pulsation_type: pulsation mode (int)
+     0 for Fundamental
+     1 for First Overtone
+    :param period: pulsation period in days (np.float64)
+    :param diagnostic_int: chemical element that was used to measure RVs.
+     Possible values: 0, 1, 2, 3, 4, 5, 6 for
+     Iron, Magnesium, Sodium, H_alpha, H_beta, H_gamma, H_delta, respectively
+    :param filein: path to the coefficients table in csv format (string)
+    :param figure_out: path to the output figure. '' if no output figure is desired. (string)
+    :param quiet: 0/1 to allow/forbid mpfit to print the results of the iterations (int)
+    :return: data_return: dictionary including the following entries:
+     'v_gamma_list': list of systemic velocities from each RV measurement
+     'xfit': grid of phases
+     'yfit_list': template fit values for each RV measuremnet (list of lists)
+     'v_gamma_mean': 2-element tuple including average and standard deviation of the systemic velocity
+     (dictionary)
+    '''
+
+    templatebin_dict = {0:'RRc', 1:'RRab1', 2:'RRab2', 3:'RRab3'}
+    diagnostic_dict = {0:'Fe', 1:'Na', 2:'Mg', 3:'Ha', 4:'Hb', 5:'Hg', 6:'Hd'}
+
+    templatebin_int = find_templatebin(pulsation_type, period)
+
+    templatebin = templatebin_dict[templatebin_int]
+    diagnostic = diagnostic_dict[diagnostic_int]
+
+    # Generates the grid of phases to evaluate the template
+    n_phases_for_model = 1000
+    xfit = (np.arange(n_phases_for_model + 1) / float(n_phases_for_model))
+
+    # Read the coefficients table
+    c = load_coefficient_table(filein)
+
+    # select the right template for the current diagnostic and template bin
+    c = c[(c['Template'] == diagnostic) & (c['Bin'] == templatebin)]
+
+    # Generates the first guess on the coefficients
+    n_guesses = 3
+    deltaphase_guesses = np.arange(n_guesses)/float(n_guesses)
+
+    os.chdir('/home/vittorioinaf/Documenti/Programmi/Python/RV_RRL_template/')
+    
     chisqs=[]
     popts=[]
     for deltaphase_guess in deltaphase_guesses:
