@@ -224,7 +224,7 @@ def find_templatebin(pulsation_type,period):
     return(templatebin)
 
 def apply_template_anchor(HJD, RV, errRV, AV, pulsation_type,
-                            period, t0, tmean_or_tmax, diagnostic_int,
+                            period, t0, tmean_or_tmax, diagnostic_int, folder,
                             filein, figure_out=''):
 
     '''
@@ -247,6 +247,7 @@ def apply_template_anchor(HJD, RV, errRV, AV, pulsation_type,
     :param diagnostic_int: chemical element that was used to measure RVs.
      Possible values: 0, 1, 2, 3, 4, 5, 6 for
      Iron, Magnesium, Sodium, H_alpha, H_beta, H_gamma, H_delta, respectively
+    :param folder: folder of the coefficients table (string)
     :param filein: path to the coefficients table in csv format (string)
     :param figure_out: path to the output figure. '' if no output figure is desired. (string)
     :return: data_return: dictionary including the following entries:
@@ -256,6 +257,8 @@ def apply_template_anchor(HJD, RV, errRV, AV, pulsation_type,
      'v_gamma_mean': 2-element tuple including average and standard deviation of the systemic velocity
      (dictionary)
     '''
+
+    os.chdir(folder)
 
     templatebin_dict = {0:'RRc', 1:'RRab1', 2:'RRab2', 3:'RRab3'}
     diagnostic_dict = {0:'Fe', 1:'Na', 2:'Mg', 3:'Ha', 4:'Hb', 5:'Hg', 6:'Hd'}
@@ -339,7 +342,7 @@ def apply_template_anchor(HJD, RV, errRV, AV, pulsation_type,
 
 
 def apply_template_templfit_amplfixed(HJD, RV, errRV, AV, pulsation_type,
-                            period, t0, diagnostic_int,
+                            period, t0, diagnostic_int, folder,
                             filein, figure_out='', quiet=1):
 
     '''
@@ -359,6 +362,7 @@ def apply_template_templfit_amplfixed(HJD, RV, errRV, AV, pulsation_type,
     :param diagnostic_int: chemical element that was used to measure RVs.
      Possible values: 0, 1, 2, 3, 4, 5, 6 for
      Iron, Magnesium, Sodium, H_alpha, H_beta, H_gamma, H_delta, respectively
+    :param folder: folder of the coefficients table (string)
     :param filein: path to the coefficients table in csv format (string)
     :param figure_out: path to the output figure. '' if no output figure is desired. (string)
     :param quiet: 0/1 to allow/forbid mpfit to print the results of the iterations (int)
@@ -396,6 +400,8 @@ def apply_template_templfit_amplfixed(HJD, RV, errRV, AV, pulsation_type,
     # Generates the first guess on the coefficients
     n_guesses = 3
     deltaphase_guesses = np.arange(n_guesses)/float(n_guesses)
+
+    os.chdir(folder)
 
     chisqs=[]
     popts=[]
@@ -460,7 +466,7 @@ def apply_template_templfit_amplfixed(HJD, RV, errRV, AV, pulsation_type,
             'chisq': chisqs[ind_best]}
 
 def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
-                            period, t0, diagnostic_int,
+                            period, t0, diagnostic_int, folder,
                             filein, figure_out='', quiet=1):
 
     '''
@@ -479,6 +485,7 @@ def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
     :param diagnostic_int: chemical element that was used to measure RVs.
      Possible values: 0, 1, 2, 3, 4, 5, 6 for
      Iron, Magnesium, Sodium, H_alpha, H_beta, H_gamma, H_delta, respectively
+    :param folder: folder of the coefficients table (string)
     :param filein: path to the coefficients table in csv format (string)
     :param figure_out: path to the output figure. '' if no output figure is desired. (string)
     :param quiet: 0/1 to allow/forbid mpfit to print the results of the iterations (int)
@@ -514,6 +521,8 @@ def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
     # Generates the first guess on the coefficients
     n_guesses = 3
     deltaphase_guesses = np.arange(n_guesses)/float(n_guesses)
+
+    os.chdir(folder)
 
     chisqs=[]
     popts=[]
@@ -566,7 +575,7 @@ def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
             'chisq': chisqs[ind_best]}
 
 def apply_template_templfit_amplfixed_fromphases(phase, RV, errRV, AV, pulsation_type,
-                            period, diagnostic_int,
+                            period, diagnostic_int, folder,
                             filein, figure_out='', quiet=1):
 
     '''
@@ -585,6 +594,7 @@ def apply_template_templfit_amplfixed_fromphases(phase, RV, errRV, AV, pulsation
     :param diagnostic_int: chemical element that was used to measure RVs.
      Possible values: 0, 1, 2, 3, 4, 5, 6 for
      Iron, Magnesium, Sodium, H_alpha, H_beta, H_gamma, H_delta, respectively
+    :param folder: folder of the coefficients table (string)
     :param filein: path to the coefficients table in csv format (string)
     :param figure_out: path to the output figure. '' if no output figure is desired. (string)
     :param quiet: 0/1 to allow/forbid mpfit to print the results of the iterations (int)
@@ -619,6 +629,8 @@ def apply_template_templfit_amplfixed_fromphases(phase, RV, errRV, AV, pulsation
     # Generates the first guess on the coefficients
     n_guesses = 3
     deltaphase_guesses = np.arange(n_guesses)/float(n_guesses)
+
+    os.chdir(folder)
 
     chisqs=[]
     popts=[]
@@ -683,7 +695,7 @@ def apply_template_templfit_amplfixed_fromphases(phase, RV, errRV, AV, pulsation
             'chisq': chisqs[ind_best]}
 
 def apply_template_templfit_amplfree_fromphases(phase, RV, errRV, pulsation_type,
-                            period, diagnostic_int,
+                            period, diagnostic_int, folder, 
                             filein, figure_out='', quiet=1):
 
     '''
@@ -701,6 +713,7 @@ def apply_template_templfit_amplfree_fromphases(phase, RV, errRV, pulsation_type
     :param diagnostic_int: chemical element that was used to measure RVs.
      Possible values: 0, 1, 2, 3, 4, 5, 6 for
      Iron, Magnesium, Sodium, H_alpha, H_beta, H_gamma, H_delta, respectively
+    :param folder: folder of the coefficients table (string)
     :param filein: path to the coefficients table in csv format (string)
     :param figure_out: path to the output figure. '' if no output figure is desired. (string)
     :param quiet: 0/1 to allow/forbid mpfit to print the results of the iterations (int)
@@ -734,7 +747,7 @@ def apply_template_templfit_amplfree_fromphases(phase, RV, errRV, pulsation_type
     n_guesses = 3
     deltaphase_guesses = np.arange(n_guesses)/float(n_guesses)
 
-    os.chdir('/home/vittorioinaf/Documenti/Programmi/Python/RV_RRL_template/')
+    os.chdir(folder)
     
     chisqs=[]
     popts=[]
