@@ -142,7 +142,7 @@ def correct_phase(phase, pulsation_type, diagnostic_int, period, tmean_or_tmax):
     # Correct the phase if Tmax instead of Tmean is provided
     if tmean_or_tmax == 'Tmax':
         correction_for_tmax = True
-        if pulsation_type == 0:
+        if pulsation_type == 1:
             phase = phase + 0.223
         else:
             phase = phase + 0.043 + 0.099 * period
