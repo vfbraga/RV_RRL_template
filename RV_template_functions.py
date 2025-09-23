@@ -142,7 +142,7 @@ def correct_phase(phase, pulsation_type, diagnostic_int, period, tmean_or_tmax):
     # Correct the phase if Tmax instead of Tmean is provided
     if tmean_or_tmax == 'Tmax':
         correction_for_tmax = True
-        if pulsation_type == 0:
+        if pulsation_type == 1:
             phase = phase + 0.223
         else:
             phase = phase + 0.043 + 0.099 * period
@@ -286,7 +286,7 @@ def apply_template_anchor(HJD, RV, errRV, AV, pulsation_type,
     
     # Estimate V_gamma for each RV measurement
     v_gamma_list = []
-#     err_v_gamma_list = []
+    errv_gamma_list = []
     yfit_list = []
 
     for phase_i, RV_i, errRV_i in zip(phase, RV, errRV):
@@ -301,15 +301,17 @@ def apply_template_anchor(HJD, RV, errRV, AV, pulsation_type,
         yfit = v_gamma_temp + gaupe(xfit, c) * ARV
 
         v_gamma_list.append(v_gamma_temp[0])
-#         err_v_gamma_list.append(errRV_i)
+        errv_gamma_list.append(np.sqrt(errRV_i**2 + (ARV*c.sigma.values[0])**2))
         yfit_list.append(yfit)
 
     v_gamma_list = np.asarray(v_gamma_list)
+    errv_gamma_list = np.asarray(errv_gamma_list)    
     v_gamma_mean = weighted_avg_and_std(v_gamma_list, 1./(errRV*errRV))
+    errv_gamma_mean = np.mean(errv_gamma_list)
     
     data_return = {'v_gamma_list': v_gamma_list, 'xfit': xfit, 'yfit_list': yfit_list,
                    'v_gamma_mean': v_gamma_mean[0], 
-                   'errv_gamma_mean': np.sqrt(v_gamma_mean[1]**2 + (ARV*c.sigma.values[0])**2)}
+                   'errv_gamma_mean': errv_gamma_mean}
 
     if figure_out != '':
         fig = plt.figure(figsize=(10, 7))
@@ -345,7 +347,7 @@ def apply_template_templfit_amplfixed(HJD, RV, errRV, AV, pulsation_type,
                             period, t0, diagnostic_int, folder,
                             filein, figure_out='', quiet=1):
 
-    '''
+    '''.
     apply_template_templfit_amplfixed function applies the right template (selected
     by means of the parameters pulsation_type, period and diagnostic)
     on a series of RV measurements
@@ -428,8 +430,9 @@ def apply_template_templfit_amplfixed(HJD, RV, errRV, AV, pulsation_type,
 
     yfit = gaupe_for_templfit_amplfixed(xfit, *popts[ind_best], filein)
     v_gamma_mean = np.mean(yfit)
-    errv_gamma_mean = np.sqrt(np.diag(m.covar))[1]
-#     errv_gamma_mean = 0
+    yfit_interp = gaupe_for_templfit_amplfixed(phase, *popts[ind_best], filein)
+    residuals = sum((RV - yfit_interp)**2)/len(RV)
+    err_on_constant = np.sqrt(np.diag(m.covar))[1]
 
     if figure_out != '':
         fig = plt.figure(figsize=(10, 7))
@@ -461,7 +464,7 @@ def apply_template_templfit_amplfixed(HJD, RV, errRV, AV, pulsation_type,
 
     return {'xfit': xfit, 'yfit': yfit,
             'v_gamma_mean': v_gamma_mean, 
-            'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + (ARV*c.sigma.values[0])**2), 
+            'errv_gamma_mean': np.sqrt(err_on_constant**2 + residuals + (ARV*c.sigma.values[0])**2), 
             'popts': popts[ind_best],
             'chisq': chisqs[ind_best]}
 
@@ -549,7 +552,9 @@ def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
     
     yfit = gaupe_for_templfit_amplfixed(xfit, *popts[ind_best], filein)
     v_gamma_mean = np.mean(yfit)
-    errv_gamma_mean = np.sqrt(np.diag(m.covar))[1]
+    yfit_interp = gaupe_for_templfit_amplfixed(phase, *popts[ind_best], filein)
+    residuals = sum((RV - yfit_interp)**2)/len(RV)
+    err_on_constant = np.sqrt(np.diag(m.covar))[1]
 
     if figure_out != '':
         fig = plt.figure(figsize=(10, 7))
@@ -570,7 +575,7 @@ def apply_template_templfit_amplfree(HJD, RV, errRV, pulsation_type,
 
     return {'xfit': xfit, 'yfit': yfit,
             'v_gamma_mean': v_gamma_mean, 
-            'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + ( popts[ind_best][2]*c.sigma.values[0])**2 ), 
+            'errv_gamma_mean': np.sqrt(err_on_constant**2 + residuals + ( popts[ind_best][2]*c.sigma.values[0])**2), 
             'popts': popts[ind_best],
             'chisq': chisqs[ind_best]}
 
@@ -657,8 +662,9 @@ def apply_template_templfit_amplfixed_fromphases(phase, RV, errRV, AV, pulsation
 
     yfit = gaupe_for_templfit_amplfixed(xfit, *popts[ind_best], filein)
     v_gamma_mean = np.mean(yfit)
-    errv_gamma_mean = np.sqrt(np.diag(m.covar))[1]
-#     errv_gamma_mean = 0
+    yfit_interp = gaupe_for_templfit_amplfixed(phase, *popts[ind_best], filein)
+    residuals = sum((RV - yfit_interp)**2)/len(RV)
+    err_on_constant = np.sqrt(np.diag(m.covar))[1]
 
     if figure_out != '':
         fig = plt.figure(figsize=(10, 7))
@@ -690,7 +696,7 @@ def apply_template_templfit_amplfixed_fromphases(phase, RV, errRV, AV, pulsation
 
     return {'xfit': xfit, 'yfit': yfit,
             'v_gamma_mean': v_gamma_mean, 
-            'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + (ARV*c.sigma.values[0])**2), 
+            'errv_gamma_mean': np.sqrt(err_on_constant**2 + residuals + (ARV*c.sigma.values[0])**2), 
             'popts': popts[ind_best],
             'chisq': chisqs[ind_best]}
 
@@ -774,7 +780,9 @@ def apply_template_templfit_amplfree_fromphases(phase, RV, errRV, pulsation_type
     
     yfit = gaupe_for_templfit_amplfixed(xfit, *popts[ind_best], filein)
     v_gamma_mean = np.mean(yfit)
-    errv_gamma_mean = np.sqrt(np.diag(m.covar))[1]
+    yfit_interp = gaupe_for_templfit_amplfixed(phase, *popts[ind_best], filein)
+    residuals = sum((RV - yfit_interp)**2)/len(RV)
+    err_on_constant = np.sqrt(np.diag(m.covar))[1]
 
     if figure_out != '':
         fig = plt.figure(figsize=(10, 7))
@@ -795,6 +803,6 @@ def apply_template_templfit_amplfree_fromphases(phase, RV, errRV, pulsation_type
 
     return {'xfit': xfit, 'yfit': yfit,
             'v_gamma_mean': v_gamma_mean, 
-            'errv_gamma_mean': np.sqrt(errv_gamma_mean**2 + ( popts[ind_best][2]*c.sigma.values[0])**2 ), 
+            'errv_gamma_mean': np.sqrt(err_on_constant**2 + residuals + ( popts[ind_best][2]*c.sigma.values[0])**2), 
             'popts': popts[ind_best],
             'chisq': chisqs[ind_best]}
